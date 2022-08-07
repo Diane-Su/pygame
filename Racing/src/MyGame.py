@@ -8,6 +8,7 @@ from mlgame.view.decorator import check_game_progress, check_game_result
 from mlgame.view.view_model import Scene, create_text_view_data, create_scene_progress_data, create_asset_init_data, \
     create_image_view_data
 
+from .Bullet import Bullet
 from .Mob import Mob
 from .Player import Player
 from .Prop import Prop
@@ -32,6 +33,7 @@ class MyGame(PaiaGame):
         self.scene = Scene(width=WIDTH, height=HEIGHT, color="#ffffff", bias_x=0, bias_y=0)
         # 宣告存放多個同類別物件的集合
         self.mobs = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
         self.walls = pygame.sprite.Group()
         # 宣告變數儲存遊戲中需紀錄的資訊
         self.used_frame = 0
@@ -62,12 +64,19 @@ class MyGame(PaiaGame):
         ai_1p_cmd = commands[get_ai_name(0)]
         if ai_1p_cmd is not None:
             action = ai_1p_cmd
+            if ai_1p_cmd == "SHOOT":
+                self._create_bullets(is_player=True, init_pos=self.player.rect.center)
         else:
             action = "NONE"
         # print(ai_1p_cmd)
+        if self.used_frame % 15 == 0:
+            for mob in self.mobs:
+                if isinstance(mob, Mob):
+                    self._create_bullets(is_player=False, init_pos=mob.xy)
         # 更新物件內部資訊
         self.player.update(action)
         self.mobs.update()
+        self.bullets.update()
         # 處理碰撞
         hits = pygame.sprite.spritecollide(self.player, self.walls, False, pygame.sprite.collide_rect_ratio(0.8))
         if hits:
@@ -75,6 +84,15 @@ class MyGame(PaiaGame):
         hits = pygame.sprite.spritecollide(self.player, self.mobs, True, pygame.sprite.collide_rect_ratio(0.8))
         if hits:
             self.player.collide_with_mobs()
+        hits = pygame.sprite.spritecollide(self.player, self.bullets, False, pygame.sprite.collide_rect_ratio(0.8))
+        for bullet in hits:
+            if not bullet.is_player:
+                bullet.kill()
+        hits = pygame.sprite.groupcollide(self.mobs, self.bullets, False, False, pygame.sprite.collide_rect_ratio(0.8))
+        for mob, bullet in hits.items():
+            if bullet[0].is_player:
+                bullet[0].kill()
+                mob.kill()
         # 判定是否重置遊戲
         if not self.is_running:
             return "RESET"
@@ -171,12 +189,17 @@ class MyGame(PaiaGame):
         for mob in self.mobs:
             if isinstance(mob, Mob):
                 game_obj_list.append(mob.game_object_data)
+        for bullet in self.bullets:
+            if isinstance(bullet, Bullet):
+                game_obj_list.append(bullet.game_object_data)
         game_obj_list.append(self.player.game_object_data)
         backgrounds = [create_image_view_data(image_id="background", x=25, y=50, width=WIDTH-50, height=HEIGHT-50)]
         foregrounds = [create_text_view_data(
-            content=f"Score: {str(self.score)}", x=WIDTH // 2 - 10, y=5, color="#6C3483", font_style="25px Arial")]
+            content=f"Score: {str(self.score)}", x=WIDTH // 2 - 10, y=5, color="#6C3483", font_style="25px Arial")
+        , create_text_view_data(
+            content=f"Lives: {str(self.score)}", x=WIDTH // 2 - 10, y=5, color="#CD6155", font_style="25px Arial")]
         toggle_objs = [create_text_view_data(
-            f"Timer: {str(self.frame_to_end - self.used_frame)} s", WIDTH - 150, 5, "#2471A3", "24px Arial BOLD")]
+            f"Timer: {str(self.frame_to_end - self.used_frame)} s", WIDTH - 150, 5, "#2471A3", "25px Arial BOLD")]
         scene_progress = create_scene_progress_data(
             frame=self.used_frame, background=backgrounds,
             object_list=game_obj_list, foreground=foregrounds, toggle=toggle_objs)
@@ -230,3 +253,7 @@ class MyGame(PaiaGame):
             # 建立mob物件，並加入到mob的集合裡
             mob = Mob(pygame.Rect(0, -100, WIDTH, HEIGHT+100))
             self.mobs.add(mob)
+
+    def _create_bullets(self, is_player: bool, init_pos: tuple):
+        bullet = Bullet(is_player=is_player, init_pos=init_pos, player_rect_area=pygame.Rect(0, 0, WIDTH, HEIGHT))
+        self.bullets.add(bullet)
