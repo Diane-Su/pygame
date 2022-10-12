@@ -35,6 +35,7 @@ class Player(pygame.sprite.Sprite):
         self._is_shoot = False
 
     def update(self, command: dict) -> None:
+        self.rect.center += self._vel
         """
         更新玩家資料
         self._used_frame += 1
@@ -59,7 +60,16 @@ class Player(pygame.sprite.Sprite):
         self.rect.topleft = self._origin_xy
 
     def act(self, action: list) -> None:
-        pass
+        if "RIGHT" in action:
+            self._vel.x = 5
+        elif "LEFT" in action:
+            self._vel.x = -5
+        elif "UP" in action:
+            self._vel.y = -5
+        elif "DOWN" in action:
+            self._vel.y = 5
+        else:
+            self._vel = Vec(0,0)
 
     def shoot(self) -> None:
         """
