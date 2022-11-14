@@ -6,31 +6,38 @@ from mlgame.utils.enum import get_ai_name
 
 from game_module.TiledMap import create_construction
 from .Player import Player
+from .Mob import Mob
 
-
-SCENE_WIDTH = 1000
-SCENE_HEIGHT = 800
 
 
 class SingleMode:
     def __init__(self, play_rect_area: pygame.Rect):
         pygame.init()
         self._user_num = 1
-        self.scene_width = SCENE_WIDTH
-        self.scene_height = SCENE_HEIGHT
+        self.scene_width = play_rect_area.width
+        self.scene_height = play_rect_area.height
+        self.scene_height_center = self.scene_height // 2
+        self.scene_width_center = self.scene_width // 2
         self.play_rect_area = play_rect_area
         self.all_sprites = pygame.sprite.Group()
-        self.player = Player(create_construction(get_ai_name(0), 0, (0, 0), (50, 50)))
+        self.player = Player(create_construction(get_ai_name(0), 0, (self.scene_width_center, 530), (50, 50)))
         self.all_sprites.add(self.player)
+        self.mobs = pygame.sprite.Group()
+        count = 0
+        for x in range(50, self.scene_width - 50, 50):
+            for y in range(50, self.scene_height_center, 50):
+                count += 1
+                mob = Mob(create_construction(_id=f"mob_{count}", _no=count, _init_pos=(x, y), _init_size=(50, 50)), play_rect_area=play_rect_area)
+                self.mobs.add(mob)
+        print(len(self.mobs))
         self.used_frame = 0
         self.state = GameResultState.FAIL
         self.status = GameStatus.GAME_ALIVE
-        self.width_center = SCENE_WIDTH // 2
-        self.height_center = SCENE_HEIGHT // 2
 
     def update(self, command: dict) -> None:
         self.used_frame += 1
         self.player.update(command)
+        self.mobs.update()
         if not self.player.get_is_alive():
             self.get_player_end()
 
@@ -59,6 +66,9 @@ class SingleMode:
 
     def get_init_image_data(self):
         init_image_data = [self.player.get_obj_init_data()]
+        for mob in self.mobs:
+            if isinstance(mob, Mob):
+                init_image_data.append(mob.get_obj_init_data())
         return init_image_data
 
     def get_ai_data_to_player(self):
@@ -75,6 +85,9 @@ class SingleMode:
 
     def get_obj_progress_data(self) -> list:
         obj_progress_data = [self.draw_player()]
+        for mob in self.mobs:
+            if isinstance(mob, Mob):
+                obj_progress_data.append(mob.get_obj_progress_data())
         return obj_progress_data
 
     def get_bias_toggle_progress_data(self) -> list:

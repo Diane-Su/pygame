@@ -8,7 +8,8 @@ from .SingleMode import SingleMode
 GAME_DIR = path.dirname(__file__)
 MAP_DIR = path.join(GAME_DIR, "..", "asset", 'maps')
 SOUND_DIR = path.join(GAME_DIR, "..", "asset", "sound")
-
+WIDTH = 800
+HEIGHT = 600
 
 class Game(PaiaGame):
     def __init__(self, user_num):
@@ -18,6 +19,7 @@ class Game(PaiaGame):
         self.is_sound = False
         self.game_mode = self.set_game_mode()
         self.attachements = []
+
 
     def get_data_from_game_to_player(self) -> dict:
         to_players_data = self.game_mode.get_ai_data_to_player()
@@ -74,7 +76,7 @@ class Game(PaiaGame):
         return self.game_mode.status == GameStatus.GAME_ALIVE
 
     def set_game_mode(self):
-        play_rect_area = pygame.Rect(0, 0, 1000, 600)
+        play_rect_area = pygame.Rect(0, 0, WIDTH, HEIGHT)
         game_mode = SingleMode(play_rect_area)
         return game_mode
 
