@@ -3,11 +3,12 @@ import pygame
 from os import path
 from mlgame.game.paia_game import GameResultState, GameStatus
 from mlgame.utils.enum import get_ai_name
+from mlgame.view.view_model import create_asset_init_data
 
 from game_module.TiledMap import create_construction
 from .Player import Player
 from .Mob import Mob
-
+from .env import IMAGE_DIR
 
 
 class SingleMode:
@@ -69,6 +70,8 @@ class SingleMode:
         for mob in self.mobs:
             if isinstance(mob, Mob):
                 init_image_data.append(mob.get_obj_init_data())
+        for no in range(1, 7):
+            init_image_data.append(create_asset_init_data(f"bullet_{no}", *(12, 27), path.join(IMAGE_DIR, f"bullet_0{no}.png"), "url"))
         return init_image_data
 
     def get_ai_data_to_player(self):
