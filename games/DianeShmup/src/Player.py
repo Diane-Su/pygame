@@ -1,15 +1,19 @@
 from os import path
+import random
 
 import pygame
 from mlgame.utils.enum import get_ai_name
 from mlgame.view.view_model import create_image_view_data, create_asset_init_data
 
+from game_module.TiledMap import create_construction
+from .Bullet import Bullet
 from .env import IMAGE_DIR
 Vec = pygame.math.Vector2
+SHOOT_CMD = "SHOOT"
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, construction: dict, **kwargs):
+    def __init__(self, construction: dict, play_rect_area: pygame.Rect, **kwargs):
         """
         初始化玩家資料
         construction可直接由TiledMap打包地圖資訊後傳入
@@ -17,15 +21,19 @@ class Player(pygame.sprite.Sprite):
         :param kwargs:
         """
         super().__init__()
+        self.last_shoot_frame = 0
+        self.play_rect_area = play_rect_area
+        self.bullets = pygame.sprite.Group()
+        self.shoot_cd = 10
         self.image_id = "1P"
-        self._id = construction["_id"]
+        self.id = construction["_id"]
         self._no = construction["_no"]
         self.rect = pygame.Rect(construction["_init_pos"], construction["_init_size"])
         self._origin_xy = self.rect.topleft
         self._origin_center = self.rect.center
-        self._angle = 0
+        self.angle = 0
         self._score = 0
-        self._used_frame = 0
+        self.used_frame = 0
         self._last_shoot_frame = 0
         self._shield = 100
         self._lives = 3
@@ -36,6 +44,7 @@ class Player(pygame.sprite.Sprite):
 
     def update(self, command: dict) -> None:
         self.rect.center += self._vel
+        self.used_frame += 1
         """
         更新玩家資料
         self._used_frame += 1
@@ -50,7 +59,8 @@ class Player(pygame.sprite.Sprite):
         :param command:
         :return:
         """
-        self.act(command[self._id])
+        self.act(command[self.id])
+        self.bullets.update()
 
     def reset(self) -> None:
         """
@@ -70,15 +80,24 @@ class Player(pygame.sprite.Sprite):
             self._vel.y = 5
         else:
             self._vel = Vec(0,0)
+        if SHOOT_CMD in action and self.used_frame - self.last_shoot_frame > self.shoot_cd:
+            self.shoot()
 
     def shoot(self) -> None:
         """
         _is_shoot = True
         :return:
         """
-        if not self._is_shoot and self._used_frame - self._last_shoot_frame > 10:
-            self._last_shoot_frame = self._used_frame
+        if not self._is_shoot and self.used_frame - self._last_shoot_frame > 10:
+            self._last_shoot_frame = self.used_frame
             self._is_shoot = True
+        self.last_shoot_frame = self.used_frame
+        _id = "player"
+        _no = random.randint(1, 6)
+        bullet = Bullet(construction=create_construction(_id=_id, _no=_no
+                                                         , _init_pos=self.rect.center, _init_size=(12, 27))
+                        , play_rect_area=self.play_rect_area)
+        self.bullets.add(bullet)
 
     def stop_shoot(self) -> None:
         """
@@ -165,17 +184,17 @@ class Player(pygame.sprite.Sprite):
         """
         :return: center
         """
-        return self._id
+        return self.id
 
     def get_data_from_obj_to_game(self) -> dict:
         """
         在遊戲主程式獲取遊戲資料給AI時被調用
         :return:
         """
-        info = {"id": f"{self._id}P",
+        info = {"id": f"{self.id}P",
                 "x": self.rect.x,
                 "y": self.rect.y,
-                "angle": self._angle
+                "angle": self.angle
                 }
         return info
 
@@ -184,20 +203,25 @@ class Player(pygame.sprite.Sprite):
         使用view_model函式，建立符合mlgame物件更新資料格式的資料，在遊戲主程式更新畫面資訊時被調用
         :return:
         """
-        image_data = create_image_view_data(f"{self._id}P", *self.rect.topleft, self.rect.width, self.rect.height, self._angle)
-        return image_data
+        progress_date_list = []
+        for bullet in self.bullets:
+            if isinstance(bullet, Bullet):
+                progress_date_list.append(bullet.get_obj_progress_data())
+        progress_date_list.append(
+            create_image_view_data(f"{self.id}P", *self.rect.topleft, self.rect.width, self.rect.height, self.angle))
+        return progress_date_list
 
     def get_obj_init_data(self) -> dict or list:
         """
         使用view_model函式，建立符合mlgame物件初始資料格式的資料，在遊戲主程式初始畫面資訊時被調用
         :return:
         """
-        image_init_data = create_asset_init_data(f"{self._id}P", self.rect.width, self.rect.height
+        image_init_data = create_asset_init_data(f"{self.id}P", self.rect.width, self.rect.height
                                                  , path.join(IMAGE_DIR, "player.png"), "url")
         return image_init_data
 
     def get_info_to_game_result(self):
-        info = {"id": f"{self._id}P"
+        info = {"id": f"{self.id}P"
                 , "x": self.rect.x
                 , "y": self.rect.y
                 }

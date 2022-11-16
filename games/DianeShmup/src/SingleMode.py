@@ -21,7 +21,7 @@ class SingleMode:
         self.scene_width_center = self.scene_width // 2
         self.play_rect_area = play_rect_area
         self.all_sprites = pygame.sprite.Group()
-        self.player = Player(create_construction(get_ai_name(0), 0, (self.scene_width_center, 530), (50, 50)))
+        self.player = Player(create_construction(get_ai_name(0), 0, (self.scene_width_center, 530), (50, 50)), self.play_rect_area)
         self.all_sprites.add(self.player)
         self.mobs = pygame.sprite.Group()
         count = 0
@@ -70,8 +70,7 @@ class SingleMode:
         for mob in self.mobs:
             if isinstance(mob, Mob):
                 init_image_data.append(mob.get_obj_init_data())
-        for no in range(1, 7):
-            init_image_data.append(create_asset_init_data(f"bullet_{no}", *(12, 27), path.join(IMAGE_DIR, f"bullet_0{no}.png"), "url"))
+        init_image_data.append(create_asset_init_data(f"bullet", *(12, 27), path.join(IMAGE_DIR, f"bullet.png"), "url"))
         return init_image_data
 
     def get_ai_data_to_player(self):
@@ -87,7 +86,7 @@ class SingleMode:
         return background_view_data
 
     def get_obj_progress_data(self) -> list:
-        obj_progress_data = [self.draw_player()]
+        obj_progress_data = self.draw_player()
         for mob in self.mobs:
             if isinstance(mob, Mob):
                 obj_progress_data.append(mob.get_obj_progress_data())
